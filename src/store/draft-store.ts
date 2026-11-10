@@ -11,6 +11,7 @@ const emptyDraft = (intro: string): RequestDraft => ({
   intro,
   selected: {},
   sectionQuestions: {},
+  sectionTitles: {},
   sectionNotes: {},
 });
 
@@ -27,6 +28,8 @@ type DraftState = RequestDraft & {
   updateSectionQuestion: (sectionId: string, index: number, value: string) => void;
   removeSectionQuestion: (sectionId: string, index: number) => void;
   setSectionNote: (sectionId: string, note: string) => void;
+  setSectionTitle: (sectionId: string, title: string) => void;
+  resetSectionTitle: (sectionId: string) => void;
   reset: (intro: string) => void;
 };
 
@@ -72,6 +75,14 @@ export const useDraft = create<DraftState>()(
           editSectionQs(sectionId, (q) => q.filter((_, i) => i !== index)),
         setSectionNote: (sectionId, note) =>
           set((st) => ({ sectionNotes: { ...st.sectionNotes, [sectionId]: note } })),
+        setSectionTitle: (sectionId, title) =>
+          set((st) => ({ sectionTitles: { ...st.sectionTitles, [sectionId]: title } })),
+        resetSectionTitle: (sectionId) =>
+          set((st) => {
+            const sectionTitles = { ...st.sectionTitles };
+            delete sectionTitles[sectionId];
+            return { sectionTitles };
+          }),
         reset: (intro) => set(emptyDraft(intro)),
       };
     },
@@ -84,6 +95,7 @@ export const useDraft = create<DraftState>()(
         intro: s.intro,
         selected: s.selected,
         sectionQuestions: s.sectionQuestions,
+        sectionTitles: s.sectionTitles,
         sectionNotes: s.sectionNotes,
       }),
     },

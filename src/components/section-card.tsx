@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ export function SectionCard({ section, editMode, isFirst, isLast }: Props) {
   const catalog = useCatalog();
   const [newItem, setNewItem] = useState("");
   const note = draft.sectionNotes[section.id] ?? section.defaultNote;
+  const customTitle = draft.sectionTitles[section.id];
   const standalone = draft.sectionQuestions[section.id] ?? [];
   const count =
     section.items.filter((it) => draft.selected[it.id]).length +
@@ -92,13 +93,48 @@ export function SectionCard({ section, editMode, isFirst, isLast }: Props) {
               className="h-8 text-sm"
               aria-label="หมายเหตุเริ่มต้น"
             />
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">ในแบบสอบถาม PDF:</span>
+              <select
+                value={section.pdfMode}
+                onChange={(e) =>
+                  catalog.updateSection(section.id, {
+                    pdfMode: e.target.value as CatalogSection["pdfMode"],
+                  })
+                }
+                className="h-8 rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="answer">มีช่องเขียนคำตอบ</option>
+                <option value="checklist">ช่องติ๊ก (เอกสาร)</option>
+              </select>
+            </label>
             <p className="text-xs text-muted-foreground">
               ใช้ {"{applicant}"} และ {"{sponsor}"} แทนชื่อผู้สมัคร / ผู้สนับสนุน
             </p>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-semibold">{fillTokens(section.title, draft)}</h2>
+            <div className="flex items-center">
+              <Input
+                value={customTitle ?? fillTokens(section.title, draft)}
+                onChange={(e) => draft.setSectionTitle(section.id, e.target.value)}
+                aria-label="หัวข้อหมวด (แก้ได้เฉพาะคำขอนี้)"
+                title="แก้หัวข้อได้เฉพาะคำขอนี้"
+                className="h-8 min-w-40 border-transparent px-1.5 font-semibold shadow-none [field-sizing:content] hover:border-input focus-visible:border-ring"
+              />
+              {customTitle !== undefined && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground"
+                  aria-label="ใช้หัวข้อเดิม"
+                  title="ใช้หัวข้อเดิม"
+                  onClick={() => draft.resetSectionTitle(section.id)}
+                >
+                  <RotateCcw className="size-3.5" />
+                </Button>
+              )}
+            </div>
             <Input
               value={note}
               onChange={(e) => draft.setSectionNote(section.id, e.target.value)}

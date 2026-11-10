@@ -145,3 +145,33 @@
 .preview-html li {
   line-height: 1.6;
 }
+
+/* Questionnaire PDF: only .print-root is printed (browser "Save as PDF"). */
+.print-root {
+  display: none;
+}
+@media print {
+  /* margin: 0 leaves Chrome no room for its URL/date/page-number header and
+     footer; per-page spacing comes from the repeating spacer rows in
+     questionnaire.tsx instead. */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  body > *:not(.print-root) {
+    display: none !important;
+  }
+  .print-root {
+    display: block !important;
+  }
+  .questionnaire .q-keep {
+    break-inside: avoid;
+  }
+  .questionnaire h2 {
+    break-after: avoid;
+  }
+}

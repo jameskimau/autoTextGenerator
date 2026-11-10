@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import {
   Download,
   Eye,
   FilePlus2,
+  FileText,
   Pencil,
   Plus,
   RotateCcw,
@@ -23,9 +25,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PreviewPanel } from "@/components/preview-panel";
+import { Questionnaire } from "@/components/questionnaire";
 import { SectionCard } from "@/components/section-card";
-import { generate } from "@/lib/generate";
-import { isCatalog, useCatalog } from "@/store/catalog-store";
+import { DEFAULT_PDF_TITLE } from "@/lib/default-catalog";
+import { buildSections, fillTokens, generate } from "@/lib/generate";
+import { printQuestionnaire } from "@/lib/print";
+import { isCatalog } from "@/lib/catalog-schema";
+import { useCatalog } from "@/store/catalog-store";
 import { useDraft } from "@/store/draft-store";
 
 const noop = () => () => {};
@@ -53,10 +59,12 @@ function Generator() {
   const [newSection, setNewSection] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const { text, html } = useMemo(
-    () => generate({ intro: catalog.intro, sections: catalog.sections }, draft),
-    [catalog.intro, catalog.sections, draft],
-  );
+  const { text, html, sections } = useMemo(() => {
+    const c = { intro: catalog.intro, sections: catalog.sections };
+    return { ...generate(c, draft), sections: buildSections(c, draft) };
+  }, [catalog.intro, catalog.sections, draft]);
+
+  const pdfTitle = fillTokens(DEFAULT_PDF_TITLE, draft);
 
   const newRequest = () => {
     if (confirm("เริ่มคำขอใหม่? ชื่อ รายการที่เลือก และคำถามจะถูกล้าง")) {
@@ -96,10 +104,18 @@ function Generator() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6">
+    <div className="mx-auto w-full max-w-7xl px-4 py-6 print:hidden">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold">สร้างข้อความขอเอกสาร</h1>
         <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => printQuestionnaire(pdfTitle)}
+            disabled={sections.length === 0}
+            title="พิมพ์แบบสอบถาม หรือเลือก “บันทึกเป็น PDF”"
+          >
+            <FileText className="size-4" />
+            สร้าง PDF
+          </Button>
           <Button variant="outline" onClick={newRequest}>
             <FilePlus2 className="size-4" />
             คำขอใหม่
@@ -254,6 +270,13 @@ function Generator() {
         </Dialog>
       </div>
       <div className="h-16 lg:hidden" />
+
+      {createPortal(
+        <div className="print-root hidden print:block">
+          <Questionnaire title={pdfTitle} sections={sections} />
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

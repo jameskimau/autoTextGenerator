@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generate } from "./generate";
+import { buildSections, generate } from "./generate";
 import type { Catalog, RequestDraft } from "./types";
 
 const catalog: Catalog = {
@@ -9,6 +9,7 @@ const catalog: Catalog = {
       id: "a",
       title: "เอกสารของ{applicant}",
       defaultNote: "ขอส่งมาก่อน",
+      pdfMode: "checklist",
       items: [
         { id: "pp", label: "Thai Passport", savedQuestions: [] },
         { id: "id", label: "บัตรประชาชนไทย", savedQuestions: [] },
@@ -18,6 +19,7 @@ const catalog: Catalog = {
       id: "b",
       title: "เอกสาร{sponsor}",
       defaultNote: "",
+      pdfMode: "answer",
       items: [{ id: "au", label: "Australian Passport", savedQuestions: [] }],
     },
   ],
@@ -29,6 +31,7 @@ const draft = (over: Partial<RequestDraft> = {}): RequestDraft => ({
   intro: "",
   selected: {},
   sectionQuestions: {},
+  sectionTitles: {},
   sectionNotes: {},
   ...over,
 });
@@ -50,9 +53,9 @@ describe("generate", () => {
         "สวัสดีครับ",
         "",
         "เอกสารของปาล์ม ขอส่งมาก่อน",
-        "- Thai Passport",
+        "☐ Thai Passport",
         "   - Have you visited somewhere?",
-        "- บัตรประชาชนไทย",
+        "☐ บัตรประชาชนไทย",
       ].join("\n"),
     );
   });
@@ -62,7 +65,7 @@ describe("generate", () => {
       catalog,
       draft({ sectionQuestions: { b: ["ปีเกิดของ {sponsor}"] } }),
     );
-    expect(text).toBe("เอกสารฝน\n- ปีเกิดของ ฝน");
+    expect(text).toBe("เอกสารฝน\n☐ ปีเกิดของ ฝน");
   });
 
   it("uses per-request note override and placeholder for missing names", () => {
@@ -77,6 +80,17 @@ describe("generate", () => {
     expect(text.split("\n")[0]).toBe("เอกสารของ{ผู้สมัคร} ด่วน");
   });
 
+  it("uses a per-request section title, still filling tokens", () => {
+    const { text } = generate(
+      catalog,
+      draft({
+        selected: { au: { questions: [] } },
+        sectionTitles: { b: "เอกสารคู่ของ{applicant}" },
+      }),
+    );
+    expect(text).toBe("เอกสารคู่ของปาล์ม\n☐ Australian Passport");
+  });
+
   it("escapes HTML", () => {
     const { html } = generate(
       catalog,
@@ -84,5 +98,26 @@ describe("generate", () => {
     );
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
+  });
+
+  it("tags entries by kind and carries the section pdfMode", () => {
+    const sections = buildSections(
+      catalog,
+      draft({
+        selected: { au: { questions: ["เคยมาออสเตรเลียไหม"] } },
+        sectionQuestions: { b: ["ปีเกิด"] },
+      }),
+    );
+    expect(sections).toEqual([
+      {
+        title: "เอกสารฝน",
+        note: "",
+        pdfMode: "answer",
+        entries: [
+          { kind: "item", label: "Australian Passport", questions: ["เคยมาออสเตรเลียไหม"] },
+          { kind: "question", label: "ปีเกิด", questions: [] },
+        ],
+      },
+    ]);
   });
 });

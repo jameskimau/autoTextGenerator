@@ -1,4 +1,4 @@
-import type { Catalog, RequestDraft } from "./types";
+import type { Catalog, PdfMode, RequestDraft } from "./types";
 
 export const APPLICANT_PLACEHOLDER = "{ผู้สมัคร}";
 export const SPONSOR_PLACEHOLDER = "{ผู้สนับสนุน}";
@@ -23,8 +23,18 @@ export function escapeHtml(text: string): string {
     .replaceAll("'", "&#39;");
 }
 
-type OutputEntry = { label: string; questions: string[] };
-type OutputSection = { title: string; note: string; entries: OutputEntry[] };
+export type OutputEntry = {
+  /** "item" = a ticked catalog item; "question" = a free-standing section question. */
+  kind: "item" | "question";
+  label: string;
+  questions: string[];
+};
+export type OutputSection = {
+  title: string;
+  note: string;
+  pdfMode: PdfMode;
+  entries: OutputEntry[];
+};
 
 export function buildSections(
   catalog: Catalog,
@@ -38,15 +48,20 @@ export function buildSections(
       const entries: OutputEntry[] = section.items
         .filter((it) => draft.selected[it.id] && it.label.trim())
         .map((it) => ({
+          kind: "item" as const,
           label: fillTokens(it.label, draft),
           questions: clean(draft.selected[it.id].questions),
         }));
       for (const q of clean(draft.sectionQuestions[section.id])) {
-        entries.push({ label: q, questions: [] });
+        entries.push({ kind: "question", label: q, questions: [] });
       }
       return {
-        title: fillTokens(section.title, draft),
+        title: fillTokens(
+          draft.sectionTitles?.[section.id] ?? section.title,
+          draft,
+        ),
         note: (draft.sectionNotes[section.id] ?? section.defaultNote ?? "").trim(),
+        pdfMode: section.pdfMode ?? "checklist",
         entries,
       };
     })
@@ -72,7 +87,7 @@ export function generate(
     const heading = s.note ? `${s.title} ${s.note}` : s.title;
     const lines = [heading];
     for (const e of s.entries) {
-      lines.push(`- ${e.label}`);
+      lines.push(`☐ ${e.label}`);
       for (const q of e.questions) lines.push(`   - ${q}`);
     }
     textBlocks.push(lines.join("\n"));
@@ -83,13 +98,15 @@ export function generate(
     const items = s.entries
       .map((e) => {
         const sub = e.questions.length
-          ? `<ul>${e.questions.map((q) => `<li>${escapeHtml(q)}</li>`).join("")}</ul>`
+          ? `<ul style="list-style:disc;padding-left:24px;margin:2px 0">${e.questions
+              .map((q) => `<li>${escapeHtml(q)}</li>`)
+              .join("")}</ul>`
           : "";
-        return `<li>${escapeHtml(e.label)}${sub}</li>`;
+        return `<li>☐ ${escapeHtml(e.label)}${sub}</li>`;
       })
       .join("");
     htmlBlocks.push(
-      `<p style="margin-bottom:0"><b>${escapeHtml(s.title)}</b>${noteHtml}</p><ul style="margin-top:4px">${items}</ul>`,
+      `<p style="margin-bottom:0"><b>${escapeHtml(s.title)}</b>${noteHtml}</p><ul style="list-style:none;padding-left:0;margin-top:4px">${items}</ul>`,
     );
   }
 

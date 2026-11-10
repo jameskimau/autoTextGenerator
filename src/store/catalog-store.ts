@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { DEFAULT_CATALOG } from "@/lib/default-catalog";
+import { normalizeCatalog } from "@/lib/catalog-schema";
 import type { Catalog, CatalogSection } from "@/lib/types";
 
 const newId = () => crypto.randomUUID();
@@ -13,7 +14,7 @@ type CatalogState = Catalog & {
   addSection: (title: string) => void;
   updateSection: (
     id: string,
-    patch: Partial<Pick<CatalogSection, "title" | "defaultNote">>,
+    patch: Partial<Pick<CatalogSection, "title" | "defaultNote" | "pdfMode">>,
   ) => void;
   removeSection: (id: string) => void;
   moveSection: (id: string, dir: -1 | 1) => void;
@@ -59,7 +60,7 @@ export const useCatalog = create<CatalogState>()(
           set((st) => ({
             sections: [
               ...st.sections,
-              { id: newId(), title, defaultNote: "", items: [] },
+              { id: newId(), title, defaultNote: "", pdfMode: "checklist", items: [] },
             ],
           })),
         updateSection: (id, patch) => mapSection(id, (s) => ({ ...s, ...patch })),
@@ -96,38 +97,16 @@ export const useCatalog = create<CatalogState>()(
         },
         forgetQuestion: (itemId, question) =>
           mapAllItems(itemId, (list) => list.filter((x) => x !== question)),
-        replaceCatalog: (catalog) =>
-          set({ intro: catalog.intro, sections: clone(catalog.sections) }),
+        replaceCatalog: (catalog) => set(normalizeCatalog(clone(catalog))),
         resetToDefault: () => set(clone(DEFAULT_CATALOG)),
       };
     },
     {
       name: "atg-catalog",
-      version: 1,
+      version: 2,
+      // v1 sections had no pdfMode.
+      migrate: (persisted) => normalizeCatalog(persisted as Catalog),
       partialize: (s) => ({ intro: s.intro, sections: s.sections }),
     },
   ),
 );
-
-export function isCatalog(value: unknown): value is Catalog {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Catalog;
-  return (
-    typeof v.intro === "string" &&
-    Array.isArray(v.sections) &&
-    v.sections.every(
-      (s) =>
-        typeof s.id === "string" &&
-        typeof s.title === "string" &&
-        typeof s.defaultNote === "string" &&
-        Array.isArray(s.items) &&
-        s.items.every(
-          (it) =>
-            typeof it.id === "string" &&
-            typeof it.label === "string" &&
-            Array.isArray(it.savedQuestions) &&
-            it.savedQuestions.every((q) => typeof q === "string"),
-        ),
-    )
-  );
-}

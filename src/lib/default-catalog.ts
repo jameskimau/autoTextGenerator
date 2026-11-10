@@ -6,6 +6,8 @@ const item = (id: string, label: string): CatalogItem => ({
   savedQuestions: [],
 });
 
+export const DEFAULT_PDF_TITLE = "ข้อมูลส่วนตัวของ{applicant}";
+
 export const DEFAULT_CATALOG: Catalog = {
   intro: "เอกสารส่วนที่ส่งมาทางไลน์ขอส่งใหม่ผ่านอีเมล์เท่านั้นนะครับ",
   sections: [
@@ -13,6 +15,7 @@ export const DEFAULT_CATALOG: Catalog = {
       id: "applicant-info",
       title: "ข้อมูลของ{applicant}",
       defaultNote: "ขอส่งมาก่อน",
+      pdfMode: "answer",
       items: [
         item("info-father-province", "จังหวัดเกิดของ คุณพ่อ"),
         item("info-mother-province", "จังหวัดเกิดของ คุณแม่"),
@@ -25,6 +28,7 @@ export const DEFAULT_CATALOG: Catalog = {
       id: "applicant-docs",
       title: "เอกสารของ{applicant}",
       defaultNote: "ขอส่งมาก่อน",
+      pdfMode: "checklist",
       items: [
         item("app-birth-cert", "รูปภาพ ใบเกิด (ขอชัดๆ นะครับ)"),
         item("app-name-change", "รูปภาพใบเปลี่ยนชื่อ"),
@@ -40,6 +44,7 @@ export const DEFAULT_CATALOG: Catalog = {
       id: "sponsor-docs",
       title: "เอกสาร{sponsor}",
       defaultNote: "ขอส่งมาก่อน",
+      pdfMode: "checklist",
       items: [
         item("sp-thai-passport", "Thai Passport"),
         item("sp-au-passport", "Australian Passport"),
@@ -51,6 +56,7 @@ export const DEFAULT_CATALOG: Catalog = {
       id: "relationship",
       title: "หลักฐานความสัมพันธ์",
       defaultNote: "เอามาวันอังคารได้ครับ",
+      pdfMode: "checklist",
       items: [
         item("rel-applicant-address", "หลักฐานที่อยู่{applicant} 10 ชิ้น +"),
         item("rel-sponsor-address", "หลักฐานที่อยู่{sponsor} 10 ชิ้น +"),
